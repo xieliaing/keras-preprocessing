@@ -126,7 +126,8 @@ def hashing_trick(text, n,
     if hash_function is None:
         hash_function = hash
     elif hash_function == 'md5':
-        hash_function = lambda w: int(md5(w.encode()).hexdigest(), 16)
+        def hash_function(w):
+            return int(md5(w.encode()).hexdigest(), 16)
 
     seq = text_to_word_sequence(text,
                                 filters=filters,
@@ -392,7 +393,7 @@ class Tokenizer(object):
         Only words known by the tokenizer will be taken into account.
 
         # Arguments
-            texts: A list of sequences (list of integers).
+            sequences: A list of sequences (list of integers).
 
         # Returns
             A list of texts (strings)
@@ -409,7 +410,7 @@ class Tokenizer(object):
         Only words known by the tokenizer will be taken into account.
 
         # Arguments
-            texts: A list of sequences.
+            sequences: A list of sequences.
 
         # Yields
             Yields individual texts.

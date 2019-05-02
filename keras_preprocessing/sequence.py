@@ -53,14 +53,16 @@ def pad_sequences(sequences, maxlen=None, dtype='int32',
     """
     if not hasattr(sequences, '__len__'):
         raise ValueError('`sequences` must be iterable.')
+    num_samples = len(sequences)
+
     lengths = []
     for x in sequences:
-        if not hasattr(x, '__len__'):
+        try:
+            lengths.append(len(x))
+        except TypeError:
             raise ValueError('`sequences` must be a list of iterables. '
                              'Found non-iterable: ' + str(x))
-        lengths.append(len(x))
 
-    num_samples = len(sequences)
     if maxlen is None:
         maxlen = np.max(lengths)
 
@@ -356,13 +358,6 @@ class TimeseriesGenerator(object):
         return (self.end_index - self.start_index +
                 self.batch_size * self.stride) // (self.batch_size * self.stride)
 
-    def _empty_batch(self, num_rows):
-        samples_shape = [num_rows, self.length // self.sampling_rate]
-        samples_shape.extend(self.data.shape[1:])
-        targets_shape = [num_rows]
-        targets_shape.extend(self.targets.shape[1:])
-        return np.empty(samples_shape), np.empty(targets_shape)
-
     def __getitem__(self, index):
         if self.shuffle:
             rows = np.random.randint(
@@ -372,11 +367,10 @@ class TimeseriesGenerator(object):
             rows = np.arange(i, min(i + self.batch_size *
                                     self.stride, self.end_index + 1), self.stride)
 
-        samples, targets = self._empty_batch(len(rows))
-        for j, row in enumerate(rows):
-            indices = range(rows[j] - self.length, rows[j], self.sampling_rate)
-            samples[j] = self.data[indices]
-            targets[j] = self.targets[rows[j]]
+        samples = np.array([self.data[row - self.length:row:self.sampling_rate]
+                            for row in rows])
+        targets = np.array([self.targets[row] for row in rows])
+
         if self.reverse:
             return samples[:, ::-1, ...], targets
         return samples, targets
@@ -392,7 +386,7 @@ class TimeseriesGenerator(object):
             data = self.data.tolist()
         try:
             json_data = json.dumps(data)
-        except:
+        except TypeError:
             raise TypeError('Data not JSON Serializable:', data)
 
         targets = self.targets
@@ -400,7 +394,7 @@ class TimeseriesGenerator(object):
             targets = self.targets.tolist()
         try:
             json_targets = json.dumps(targets)
-        except:
+        except TypeError:
             raise TypeError('Targets not JSON Serializable:', targets)
 
         return {
